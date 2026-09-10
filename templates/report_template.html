@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Excel Data Analysis Report — {{ filename }}</title>
+<style>
+  :root { --accent: #4C78A8; --bg: #f7f9fc; --border: #e2e8f0; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         margin: 0; padding: 0; color: #1a202c; background: var(--bg); line-height: 1.5; }
+  header { background: var(--accent); color: #fff; padding: 28px 40px; }
+  header h1 { margin: 0 0 6px; font-size: 24px; }
+  header .meta { font-size: 13px; opacity: 0.9; }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 40px 60px; }
+  section { background: #fff; border: 1px solid var(--border); border-radius: 10px;
+            padding: 20px 24px; margin: 22px 0; }
+  h2 { margin-top: 0; font-size: 19px; border-bottom: 2px solid var(--accent);
+       padding-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { background: #eef2f7; font-weight: 600; }
+  tr:hover td { background: #fafcff; }
+  .cards { display: flex; flex-wrap: wrap; gap: 14px; }
+  .card { flex: 1 1 150px; background: #eef2f7; border-radius: 8px; padding: 14px 16px; }
+  .card .n { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .card .l { font-size: 12px; color: #4a5568; text-transform: uppercase; letter-spacing: .04em; }
+  .insight { background: #f0f7ff; border-left: 4px solid var(--accent);
+             padding: 10px 14px; border-radius: 4px; margin: 10px 0; }
+  .chart { text-align: center; margin: 18px 0; }
+  .chart img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; }
+  .chart .cap { font-size: 13px; color: #4a5568; margin-top: 4px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+           background: #e2e8f0; }
+  .warn { color: #c05621; font-weight: 600; }
+  footer { text-align: center; font-size: 12px; color: #718096; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Excel Data Analysis Report</h1>
+  <div class="meta">
+    File: <strong>{{ filename }}</strong> &nbsp;·&nbsp; Sheet: <strong>{{ sheet_name }}</strong>
+    &nbsp;·&nbsp; Generated: {{ generated_at }}
+  </div>
+</header>
+
+<main>
+  <!-- Overview -->
+  <section>
+    <h2>1. Overview</h2>
+    <div class="cards">
+      <div class="card"><div class="n">{{ quality.n_rows }}</div><div class="l">Rows</div></div>
+      <div class="card"><div class="n">{{ quality.n_cols }}</div><div class="l">Columns</div></div>
+      <div class="card"><div class="n">{{ quality.total_missing_cells }}</div><div class="l">Missing cells</div></div>
+      <div class="card"><div class="n">{{ quality.duplicate_rows }}</div><div class="l">Duplicate rows</div></div>
+    </div>
+  </section>
+
+  <!-- Column Profile -->
+  <section>
+    <h2>2. Column Profile</h2>
+    <table>
+      <thead>
+        <tr><th>Column</th><th>Type</th><th>Dtype</th><th>Unique</th><th>Missing %</th><th>Sample values</th></tr>
+      </thead>
+      <tbody>
+        {% for p in profiles %}
+        <tr>
+          <td>{{ p.column }}</td>
+          <td><span class="badge">{{ p.type }}</span></td>
+          <td>{{ p.dtype }}</td>
+          <td>{{ p.unique }}</td>
+          <td>{% if p.missing_pct > 50 %}<span class="warn">{{ p.missing_pct }}%</span>{% else %}{{ p.missing_pct }}%{% endif %}</td>
+          <td>{{ p.samples }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Data Quality -->
+  <section>
+    <h2>3. Data Quality</h2>
+    <ul>
+      <li><strong>Duplicate rows:</strong> {{ quality.duplicate_rows }}</li>
+      <li><strong>Constant columns:</strong>
+        {% if quality.constant_columns %}{{ quality.constant_columns | join(", ") }}{% else %}None{% endif %}</li>
+      <li><strong>High-missing (&gt;50%) columns:</strong>
+        {% if quality.high_missing_columns %}<span class="warn">{{ quality.high_missing_columns | join(", ") }}</span>{% else %}None{% endif %}</li>
+      <li><strong>Mixed-type columns:</strong>
+        {% if quality.mixed_type_columns %}{{ quality.mixed_type_columns | join(", ") }}{% else %}None{% endif %}</li>
+    </ul>
+    {% if quality.outliers %}
+    <table>
+      <thead><tr><th>Numeric column</th><th>Outliers (IQR)</th></tr></thead>
+      <tbody>
+        {% for col, n in quality.outliers.items() %}
+        <tr><td>{{ col }}</td><td>{{ n }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </section>
+
+  <!-- Missing Value Recommendations -->
+  <section>
+    <h2>4. Missing Value Recommendations</h2>
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Missing %</th><th>Recommended strategy</th><th>Reason</th></tr></thead>
+      <tbody>
+        {% for r in recommendations %}
+        <tr>
+          <td>{{ r.column }}</td>
+          <td><span class="badge">{{ r.type }}</span></td>
+          <td>{{ r.missing_pct }}%</td>
+          <td>{{ r.strategy }}</td>
+          <td>{{ r.reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Charts -->
+  <section>
+    <h2>5. Charts</h2>
+    {% if charts %}
+      {% for c in charts %}
+      <div class="chart">
+        <img src="data:image/png;base64,{{ c.image }}" alt="{{ c.title }}" />
+        <div class="cap">{{ c.title }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p>No charts could be generated for this dataset.</p>
+    {% endif %}
+  </section>
+
+  <!-- Insights -->
+  <section>
+    <h2>6. Auto-Generated Insights</h2>
+    {% for i in insights %}
+    <div class="insight">{{ i }}</div>
+    {% endfor %}
+  </section>
+</main>
+
+<footer>Generated by Excel Data Analyzer &amp; Insight Generator</footer>
+</body>
+</html>

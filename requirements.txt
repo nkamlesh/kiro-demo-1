@@ -1,0 +1,10 @@
+# Excel Data Analyzer & Insight Generator - dependencies
+streamlit>=1.32
+pandas>=2.0
+numpy>=1.24
+openpyxl>=3.1        # read .xlsx / .xlsm
+xlrd>=2.0            # read legacy .xls
+matplotlib>=3.7      # static charts (embed cleanly in HTML)
+seaborn>=0.12        # nicer statistical charts
+scipy>=1.10          # skewness / outlier stats
+jinja2>=3.1          # HTML report templating
