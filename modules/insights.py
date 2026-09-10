@@ -20,13 +20,19 @@ def generate_insights(df: pd.DataFrame, profiles: List[Dict], quality: Dict) -> 
 
     # 1. Strongest correlation pair among numeric columns.
     if len(numeric_cols) >= 2:
-        corr = df[numeric_cols].corr(numeric_only=True).abs()
-        np.fill_diagonal(corr.values, 0)
+        signed_corr = df[numeric_cols].corr(numeric_only=True)
+        corr = signed_corr.abs()
+        # Zero out the diagonal on a writable copy so a self-correlation of 1.0
+        # never wins. Mutating corr.values in place can fail because pandas may
+        # return a read-only array.
+        diag = np.zeros(corr.shape, dtype=bool)
+        np.fill_diagonal(diag, True)
+        corr = corr.mask(diag, 0.0)
         if not corr.isna().all().all():
             max_val = corr.max().max()
             if max_val >= 0.5:
                 pair = corr.stack().idxmax()
-                signed = df[numeric_cols].corr(numeric_only=True).loc[pair[0], pair[1]]
+                signed = signed_corr.loc[pair[0], pair[1]]
                 direction = "positive" if signed > 0 else "negative"
                 insights.append(
                     f"'{pair[0]}' and '{pair[1]}' show a strong {direction} "
